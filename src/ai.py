@@ -7,7 +7,6 @@ using Groq API, with a deterministic rule-based fallback.
 import os
 from typing import Optional
 from datetime import datetime
-import httpx
 
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -67,6 +66,7 @@ def _llm_summary(fii_net: float, dii_net: float, today_str: str) -> Optional[str
     )
 
     try:
+        import httpx  # lazy import — httpx may not install on Streamlit Cloud
         with httpx.Client(timeout=15.0) as client:
             resp = client.post(
                 GROQ_API_URL,

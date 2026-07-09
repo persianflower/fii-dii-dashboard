@@ -2,8 +2,6 @@
 
 from typing import Optional
 
-import yfinance as yf
-
 from src.config import NIFTY_TICKER
 
 
@@ -52,6 +50,7 @@ def get_nifty_history(start_date: str, end_date: str) -> Optional[dict[str, floa
     Returns dict mapping 'DD-Mon-YYYY' → close price, or None on failure.
     """
     try:
+        import yfinance as yf  # lazy import — avoids numpy/pandas version conflicts
         ticker = yf.Ticker(NIFTY_TICKER)
         hist = ticker.history(start=start_date, end=end_date)
         if hist.empty:
