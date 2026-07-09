@@ -59,12 +59,12 @@ class TestGetFiidiiData:
         assert result[0]["net_value"] == 1962.8
 
     @patch("src.fetch.nse")
-    def handles_empty_response(self, mock_nse):
+    def test_handles_empty_response(self, mock_nse):
         mock_nse.nse_fiidii.return_value = []
         assert get_fiidii_data() == []
 
     @patch("src.fetch.nse")
-    def handles_nse_error(self, mock_nse):
+    def test_handles_nse_error(self, mock_nse):
         mock_nse.nse_fiidii.side_effect = Exception("NSE API unavailable")
         assert get_fiidii_data() == []
 
@@ -83,6 +83,6 @@ class TestGetNiftyPrice:
         assert price == 24500.50
 
     @patch("src.fetch.yf")
-    def returns_none_on_failure(self, mock_yf):
+    def test_returns_none_on_failure(self, mock_yf):
         mock_yf.Ticker.side_effect = Exception("yfinance error")
         assert get_nifty_price() is None
