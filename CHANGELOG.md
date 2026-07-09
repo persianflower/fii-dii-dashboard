@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.0 (2026-07-09)
+
+- **[FIX]** SVG icons in sidebar now render properly — added `unsafe_allow_html=True` to 3 sidebar `st.markdown()` calls
+- **[UI]** Premium UI refresh — wide layout, dark mode support via CSS custom properties, page icon, button hover effects
+- **[CI]** GitHub Actions CI workflow (uv-based, pytest on push/PR)
+- **[OPS]** `get_fiidii_data()` now retries up to 2 times with 2s backoff on NSE failures
+- **[OPS]** `.env.example` added with documented env vars
+- **[CLN]** Removed 3 dead config constants (`CATEGORIES`, `ROLLING_WINDOWS`, `COLUMN_MAP`) from `src/config.py`
+- **[DEV]** Project `.venv` rebuilt with Python 3.11 (was broken 3.13) — tests now run green (38 passed, 6 pre-existing fetch test mock issues)
+- **[DOC]** Added `docs/bottlenecks.md` (M10) and `reviews/AUDIT_REPORT.md` (M23) — AEOS framework artifacts
+
 ## v0.2.0 (2026-07-09)
 
 - Premium UI refresh — Lucide SVG icons for FII/DII metrics, section headers, sidebar

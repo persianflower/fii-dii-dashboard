@@ -20,8 +20,16 @@ from src.ai import generate_summary
 # ─── Page config ───────────────────────────────────────────
 st.set_page_config(
     page_title="FII/DII Dashboard",
-    page_icon=None,
-    layout="centered",
+    page_icon=(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" '
+        'viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round">'
+        '<circle cx="12" cy="12" r="10"/>'
+        '<path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>'
+        '<path d="M2 12h20"/>'
+        '<path d="M12 6v6l4 2"/></svg>'
+    ),
+    layout="wide",
 )
 
 # ─── Lucide SVGs (compact, inline) ─────────────────────────
@@ -32,11 +40,36 @@ _RF = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0
 _DL = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'  # download
 
 # ─── Custom CSS (minimal, premium) ─────────────────────────
+# ─── Custom CSS (minimal, premium, theme-aware) ────────────
 st.markdown("""<style>
-    .stApp { max-width: 960px; margin: 0 auto; }
+    :root {
+        --bg-card: #f8fafc;
+        --border-card: #e2e8f0;
+        --text-muted: #64748b;
+        --text-caption: #94a3b8;
+        --bg-info: #f0f4ff;
+        --border-info: #dbeafe;
+        --accent: #22C55E;
+        --danger: #dc2626;
+    }
+    @media (prefers-color-scheme: dark) {
+        .stApp { background: #0f172a; }
+        :root {
+            --bg-card: #1e293b;
+            --border-card: #334155;
+            --text-muted: #94a3b8;
+            --text-caption: #64748b;
+            --bg-info: #1e3a5f;
+            --border-info: #2563eb;
+        }
+        div[data-testid="column"] { background: #1e293b; border-color: #334155; }
+        div[data-testid="metric-container"] > label { color: #94a3b8 !important; }
+        .st-b7, .st-b6, .st-b5, .st-b4 { color: #e2e8f0 !important; }
+    }
+    .stApp { max-width: 1200px; margin: 0 auto; }
     div[data-testid="column"] {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--bg-card);
+        border: 1px solid var(--border-card);
         border-radius: 12px;
         padding: 16px 14px;
     }
@@ -46,7 +79,7 @@ st.markdown("""<style>
     }
     div[data-testid="metric-container"] > label {
         font-size: 0.75rem !important;
-        color: #64748b !important;
+        color: var(--text-muted) !important;
         font-weight: 500 !important;
     }
     div[data-testid="metric-container"] > div {
@@ -54,16 +87,18 @@ st.markdown("""<style>
         font-weight: 600 !important;
     }
     div[data-testid="stInfo"] {
-        background: #f0f4ff !important;
-        border: 1px solid #dbeafe !important;
+        background: var(--bg-info) !important;
+        border: 1px solid var(--border-info) !important;
         border-radius: 10px !important;
     }
     .ml { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.78rem; font-weight: 500; }
-    .mc { font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+    .mc { font-size: 0.7rem; color: var(--text-caption); margin-top: 2px; }
     .hdr { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.05rem; margin: 24px 0 4px; }
-    .empty { text-align: center; padding: 32px 20px; border: 1px dashed #d1d5db; border-radius: 12px; color: #9ca3af; font-size: 0.85rem; }
+    .empty { text-align: center; padding: 32px 20px; border: 1px dashed var(--border-card); border-radius: 12px; color: var(--text-caption); font-size: 0.85rem; }
     hr { margin: 4px 0 16px; }
     .stButton button, .stDownloadButton button { border-radius: 8px; font-size: 0.8rem; width: 100%; }
+    .stButton button:hover { opacity: 0.85; transition: opacity 0.15s; }
+    section[data-testid="stSidebar"] .stMarkdown { font-size: 0.85rem; }
 </style>""", unsafe_allow_html=True)
 
 
@@ -117,7 +152,7 @@ else:
 
 # ─── Sidebar ──────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(f"**FII/DII Dashboard**  \n{_CA} {today_str}")
+    st.markdown(f"**FII/DII Dashboard**  \n{_CA} {today_str}", unsafe_allow_html=True)
     st.divider()
 
     st.markdown("**Filters**")
@@ -130,7 +165,7 @@ with st.sidebar:
     )
     st.divider()
 
-    st.markdown(f"**Actions** {_RF}")
+    st.markdown(f"**Actions** {_RF}", unsafe_allow_html=True)
     if st.button("Refresh data", use_container_width=True):
         st.cache_resource.clear()
         st.rerun()
@@ -138,7 +173,7 @@ with st.sidebar:
     if not df_all.empty:
         buf = io.StringIO()
         df_all.to_csv(buf, index=False)
-        st.markdown(f"{_DL}")
+        st.markdown(f"{_DL}", unsafe_allow_html=True)
         st.download_button(
             label="Download CSV",
             data=buf.getvalue(),

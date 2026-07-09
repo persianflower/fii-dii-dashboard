@@ -43,11 +43,11 @@ class TestParseFiidiiRow:
 
 
 class TestGetFiidiiData:
-    """Integration-adjacent: mocking nsepython."""
+    """Patch nsepython.nse_fiidii directly (local import)."""
 
-    @patch("src.fetch.nse")
-    def test_returns_parsed_records(self, mock_nse):
-        mock_nse.nse_fiidii.return_value = [
+    @patch("nsepython.nse_fiidii")
+    def test_returns_parsed_records(self, mock_fiidii):
+        mock_fiidii.return_value = [
             {"category": "FII/FPI", "date": "09-Jul-2026",
              "buyValue": "17463.95", "sellValue": "15501.15", "netValue": "1962.8"},
             {"category": "DII", "date": "09-Jul-2026",
@@ -58,42 +58,43 @@ class TestGetFiidiiData:
         assert result[0]["category"] == "FII/FPI"
         assert result[0]["net_value"] == 1962.8
 
-    @patch("src.fetch.nse")
-    def test_handles_empty_response(self, mock_nse):
-        mock_nse.nse_fiidii.return_value = []
+    @patch("nsepython.nse_fiidii")
+    def test_handles_empty_response(self, mock_fiidii):
+        mock_fiidii.return_value = []
         assert get_fiidii_data() == []
 
-    @patch("src.fetch.nse")
-    def test_handles_nse_error(self, mock_nse):
-        mock_nse.nse_fiidii.side_effect = Exception("NSE API unavailable")
+    @patch("nsepython.nse_fiidii")
+    def test_handles_nse_error(self, mock_fiidii):
+        mock_fiidii.side_effect = Exception("NSE API unavailable")
         assert get_fiidii_data() == []
 
 
 class TestGetNiftyHistory:
+    """Patch yfinance.Ticker directly (local import)."""
 
-    @patch("src.fetch.yf")
-    def test_returns_price_dict(self, mock_yf):
+    @patch("yfinance.Ticker")
+    def test_returns_price_dict(self, mock_ticker_cls):
         import pandas as pd
         dates = pd.to_datetime(["2026-07-08", "2026-07-09", "2026-07-10"])
         hist = pd.DataFrame({"Close": [24400.0, 24450.0, 24500.50]}, index=dates)
         mock_ticker = MagicMock()
         mock_ticker.history.return_value = hist
-        mock_yf.Ticker.return_value = mock_ticker
+        mock_ticker_cls.return_value = mock_ticker
         prices = get_nifty_history("2026-07-08", "2026-07-10")
         assert prices is not None
         assert len(prices) == 3
         assert prices["08-Jul-2026"] == 24400.0
         assert prices["10-Jul-2026"] == 24500.50
 
-    @patch("src.fetch.yf")
-    def test_returns_none_on_failure(self, mock_yf):
-        mock_yf.Ticker.side_effect = Exception("yfinance error")
+    @patch("yfinance.Ticker")
+    def test_returns_none_on_failure(self, mock_ticker_cls):
+        mock_ticker_cls.side_effect = Exception("yfinance error")
         assert get_nifty_history("2026-07-01", "2026-07-10") is None
 
-    @patch("src.fetch.yf")
-    def test_returns_none_on_empty(self, mock_yf):
+    @patch("yfinance.Ticker")
+    def test_returns_none_on_empty(self, mock_ticker_cls):
         import pandas as pd
         mock_ticker = MagicMock()
         mock_ticker.history.return_value = pd.DataFrame()
-        mock_yf.Ticker.return_value = mock_ticker
+        mock_ticker_cls.return_value = mock_ticker
         assert get_nifty_history("2026-07-01", "2026-07-10") is None

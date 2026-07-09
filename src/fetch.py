@@ -27,30 +27,35 @@ def parse_fiidii_row(raw: dict) -> Optional[dict]:
 def get_fiidii_data() -> list[dict]:
     """Fetch current FII/DII data from NSE and return parsed records.
 
-    Returns empty list on failure.
+    Retries up to 2 times with 2s backoff. Returns empty list on all failures.
     """
-    try:
-        import nsepython as nse  # lazy import — nsepython's deps may not install cleanly
-        raw_rows = nse.nse_fiidii()
-        if not raw_rows:
+    import time
+    for attempt in range(3):
+        try:
+            import nsepython as nse
+            raw_rows = nse.nse_fiidii()
+            if not raw_rows:
+                return []
+            parsed = []
+            for row in raw_rows:
+                p = parse_fiidii_row(row)
+                if p:
+                    parsed.append(p)
+            return parsed
+        except Exception:
+            if attempt < 2:
+                time.sleep(2)
+                continue
             return []
-        parsed = []
-        for row in raw_rows:
-            p = parse_fiidii_row(row)
-            if p:
-                parsed.append(p)
-        return parsed
-    except Exception:
-        return []
 
 
 def get_nifty_history(start_date: str, end_date: str) -> Optional[dict[str, float]]:
     """Fetch historical Nifty 50 closing prices for a date range.
 
-    Returns dict mapping 'DD-Mon-YYYY' → close price, or None on failure.
+    Returns dict mapping 'DD-Mon-YYYY' -> close price, or None on failure.
     """
     try:
-        import yfinance as yf  # lazy import — avoids numpy/pandas version conflicts
+        import yfinance as yf
         ticker = yf.Ticker(NIFTY_TICKER)
         hist = ticker.history(start=start_date, end=end_date)
         if hist.empty:
