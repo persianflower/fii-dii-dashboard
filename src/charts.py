@@ -1,14 +1,14 @@
 """Plotly chart builders for the FII/DII dashboard."""
 
+from __future__ import annotations
+
 from typing import Optional
 
-import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
-
-def _records_to_df(records: list[dict]) -> pd.DataFrame:
+def _records_to_df(records: list[dict]) -> "pd.DataFrame":
     """Convert DB records to a pivoted DataFrame with dates as index."""
+    import pandas as pd  # lazy — avoids numpy/pandas version conflicts at import time
+
     if not records:
         return pd.DataFrame()
     df = pd.DataFrame(records)
@@ -16,18 +16,27 @@ def _records_to_df(records: list[dict]) -> pd.DataFrame:
     return df.sort_values("date_parsed")
 
 
-def _pivot_net(df: pd.DataFrame) -> pd.DataFrame:
+def _pivot_net(df: "pd.DataFrame") -> "pd.DataFrame":
     """Pivot for net values: columns = categories, index = date."""
     return df.pivot_table(
         index="date_parsed", columns="category", values="net_value", aggfunc="first"
     )
 
 
-def build_trend_chart(records: list[dict]) -> go.Figure:
+def _empty_figure(title: str = "No data available") -> "go.Figure":
+    """Return an empty figure with a title."""
+    import plotly.graph_objects as go  # lazy import
+
+    return go.Figure().update_layout(title=title)
+
+
+def build_trend_chart(records: list[dict]) -> "go.Figure":
     """Build a net FII/DII trend line chart."""
+    import plotly.graph_objects as go  # lazy import
+
     df = _records_to_df(records)
     if df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return _empty_figure()
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
@@ -57,11 +66,13 @@ def build_trend_chart(records: list[dict]) -> go.Figure:
     return fig
 
 
-def build_comparison_chart(records: list[dict]) -> go.Figure:
+def build_comparison_chart(records: list[dict]) -> "go.Figure":
     """Build a grouped bar chart comparing FII vs DII net values."""
+    import plotly.graph_objects as go  # lazy import
+
     df = _records_to_df(records)
     if df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return _empty_figure()
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
@@ -87,15 +98,16 @@ def build_comparison_chart(records: list[dict]) -> go.Figure:
     return fig
 
 
-def build_rolling_avg_chart(records: list[dict], window: int = 7) -> go.Figure:
+def build_rolling_avg_chart(records: list[dict], window: int = 7) -> "go.Figure":
     """Build a rolling average chart for FII and DII net flows."""
+    import plotly.graph_objects as go  # lazy import
+
     df = _records_to_df(records)
     if df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return _empty_figure()
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
-
     colors = {"FII/FPI": "#22C55E", "DII": "#EF4444"}
 
     for category in ["FII/FPI", "DII"]:
@@ -122,15 +134,18 @@ def build_rolling_avg_chart(records: list[dict], window: int = 7) -> go.Figure:
     return fig
 
 
-def build_fii_nifty_overlay(records: list[dict], nifty_prices: Optional[dict[str, float]] = None) -> go.Figure:
+def build_fii_nifty_overlay(records: list[dict], nifty_prices: Optional[dict[str, float]] = None) -> "go.Figure":
     """Dual-axis chart: FII net flow + Nifty closing price."""
+    import plotly.graph_objects as go  # lazy import
+    from plotly.subplots import make_subplots  # lazy import
+
     df = _records_to_df(records)
     if df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return _empty_figure()
 
     fii_data = df[df["category"] == "FII/FPI"]
     if fii_data.empty:
-        return go.Figure().update_layout(title="No FII data available")
+        return _empty_figure("No FII data available")
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -146,6 +161,8 @@ def build_fii_nifty_overlay(records: list[dict], nifty_prices: Optional[dict[str
     )
 
     if nifty_prices:
+        import pandas as pd  # lazy import
+
         dates = pd.to_datetime(list(nifty_prices.keys()), format="%d-%b-%Y")
         prices = list(nifty_prices.values())
         fig.add_trace(
