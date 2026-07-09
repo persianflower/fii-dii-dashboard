@@ -1,93 +1,47 @@
-# NSE FII/DII Data Dashboard — Architecture
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROBLEM STATEMENT:    Add AI summary, Telegram alerts, monthly rollup, F&O tab, and sector breakdown to existing FII/DII dashboard
+REQUIREMENTS:
+  - AI summary: LLM-generated one-liner from latest FII/DII data, with rule-based fallback
+  - Telegram alert: Cron-based notification when FII net crosses ±₹1,000 Cr
+  - Monthly rollup: SQLite aggregate query, displayed as st.metric
+  - F&O tab: New tab in the dashboard, fetch from separate NSE endpoint
+  - Sector breakdown: Map top stocks to sectors, show FII flow by sector
 
-## System Design
+CONSTRAINTS:
+  - No new backend services — all runs in Streamlit+dependencies
+  - No cron — lazy-fill pattern for all data (alert uses existing Telegram cron infra)
+  - No new external APIs beyond what's already used (yfinance, nsepython)
+  - LLM calls use existing Groq API key
 
-```
-┌──────────────────────┐
-│   Web Browser        │
-│   (streamlit.app)    │
-└─────────┬────────────┘
-          │ HTTPS
-┌─────────▼────────────────────────┐
-│  Streamlit App (app.py)          │
-│                                  │
-│  ┌───────────┐  ┌─────────────┐  │
-│  │ Fetcher   │  │ Charts      │  │
-│  │ Module    │  │ Module      │  │
-│  │ (fetch)   │  │ (charts)    │  │
-│  └─────┬─────┘  └─────────────┘  │
-│        │                          │
-│  ┌─────▼──────────────────────┐  │
-│  │  Database Module (db)      │  │
-│  │  - SQLite                  │  │
-│  │  - Session: fii_dii_data   │  │
-│  └─────┬──────────────────────┘  │
-└────────┼──────────────────────────┘
-         │
-┌────────▼──────────────────────────┐
-│  External Sources                 │
-│  - nsepython.nse_fiidii() (NSE)   │
-│  - yfinance ^NSEI (Nifty price)   │
-└───────────────────────────────────┘
-```
+ARCHITECTURE OPTIONS:
+  Option A: Inline — add all new code into existing app.py and src/ modules
+  Option B: Plugin — create a src/plugins/ directory with feature-specific modules
+  Option C: Duplicate app — no, overkill for 4 features
 
-## Data Flow
+RECOMMENDED: Option A (inline)
+  Rationale: Each feature is <50 lines of new code. Creating a plugin system for 4
+  small additions is over-engineering. Ponytail principle — simplest thing that works.
 
-1. **App Load:** Check SQLite for today's snapshot
-2. **If missing:** Call nse_fiidii() → parse → store in SQLite
-3. **If exists:** Use cached data (session state)
-4. **Render:** Fetch all history from SQLite → plot charts
+COMPONENT DIAGRAM:
+  app.py — 3 new tabs (Monthly Rollup, F&O Data → future, Sector Breakdown → future)
+  src/fetch.py — 2 new functions (get_fii_fno_data, get_sector_map)
+  src/ai.py — NEW file for AI summary generation (wraps LLM call)
+  src/alerts.py — NEW file for Telegram alert logic
+  internals/orchestrator.md — update with Phase 2 progress
 
-## Database Schema
+DATA FLOW:
+  AI summary: fetch.get_fiidii_data() → latest row → ai.generate_summary() → app.py display
+  Telegram: cron → src/alerts/check_threshold() → telegram.send_message()
+  Monthly: fetch data (all) → SQL GROUP BY month → app.py metric display
 
-```sql
-CREATE TABLE IF NOT EXISTS fii_dii_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,                -- DD-Mon-YYYY (e.g., 08-Jul-2026)
-    category TEXT NOT NULL,            -- 'FII/FPI' or 'DII'
-    buy_value REAL NOT NULL,           -- ₹ Crores
-    sell_value REAL NOT NULL,
-    net_value REAL NOT NULL,
-    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(date, category)
-);
+DATA MODEL: No schema changes required
 
--- Index for fast date-range queries
-CREATE INDEX IF NOT EXISTS idx_fii_dii_date ON fii_dii_data(date);
-```
+RISKS:
+  Top 1: LLM API may fail or return nonsense — fallback to rule-based summary
+  Top 2: Telegram key not configured — feature silently disabled
+  Top 3: NSE API for F&O may differ from cash endpoint — treat as unknown
 
-## Module Structure
-
-```
-src/
-├── app.py              # Streamlit entry point — layout, sidebar, pages
-├── db.py               # SQLite init, insert, query helpers
-├── fetch.py            # nse_fiidii() wrapper + parsing + Nifty fetch
-├── charts.py           # Plotly chart builders (trend, overlay, rolling)
-├── config.py           # Constants, settings, categories
-└── __init__.py
-
-tests/
-├── test_db.py
-├── test_fetch.py
-├── test_charts.py
-└── __init__.py
-```
-
-## Key Design Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| **Lazy-fill instead of cron** | Streamlit Cloud has no scheduler — fetch on app open if today's data missing |
-| **Session state cache** | Avoid re-fetch on every rerun (8.5s is slow) |
-| **Normalize all values to float** | nse_fiidii() returns strings — parse immediately on insert |
-| **Nifty overlay via yfinance** | Separate fetch, synced to same date axis |
-| **Rolling averages computed in SQL/query** | 7-day and 30-day avg as SQL window functions or pandas rolling |
-| **One-file-per-module** | Keeps it simple — no over-engineering for a 5-module app |
-
-## Non-Functional Requirements
-
-- **Cold start:** ≤15s (includes 8.5s for nse_fiidii if today missing)
-- **Warm load:** ≤2s (cached in session state)
-- **DB size:** ~5KB/year (365 days × 2 categories × ~50 bytes)
-- **Zero deps beyond:** streamlit, pandas, plotly, nsepython, yfinance, sqlite3 (stdlib)
+TRADEOFFS:
+  Accepted: F&O and sector breakdown deferred to follow-up session
+  Deferred: CI/CD pipeline, monitoring
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

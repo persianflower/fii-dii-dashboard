@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from src.db import init_db, insert_record, query_all, query_by_date_range
+from src.db import init_db, insert_record, query_all, query_by_date_range, get_monthly_rollup
 
 
 @pytest.fixture
@@ -60,4 +60,29 @@ def test_query_by_date_range(db_path):
 def test_empty_db_returns_empty_list(db_path):
     conn = init_db(db_path)
     assert query_all(conn) == []
+    conn.close()
+
+
+def test_monthly_rollup_aggregation(db_path):
+    conn = init_db(db_path)
+    insert_record(conn, "01-Jul-2026", "FII/FPI", 1000.0, 800.0, 200.0)
+    insert_record(conn, "01-Jul-2026", "DII", 500.0, 600.0, -100.0)
+    insert_record(conn, "15-Jul-2026", "FII/FPI", 2000.0, 1500.0, 500.0)
+    insert_record(conn, "15-Jul-2026", "DII", 800.0, 900.0, -100.0)
+    insert_record(conn, "01-Aug-2026", "FII/FPI", 3000.0, 2000.0, 1000.0)
+
+    result = get_monthly_rollup(conn, 2026, 7)
+    assert len(result) == 2  # FII and DII
+    fii = next(r for r in result if r["category"] == "FII/FPI")
+    dii = next(r for r in result if r["category"] == "DII")
+    assert fii["net_value"] == 700.0  # 200 + 500
+    assert dii["net_value"] == -200.0  # -100 + -100
+    conn.close()
+
+
+def test_monthly_rollup_empty_month(db_path):
+    conn = init_db(db_path)
+    insert_record(conn, "01-Jul-2026", "FII/FPI", 1000.0, 800.0, 200.0)
+    result = get_monthly_rollup(conn, 2026, 8)
+    assert result == []
     conn.close()

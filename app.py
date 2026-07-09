@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from src.config import DB_PATH
-from src.db import init_db, insert_record, query_all, get_today_snapshot
+from src.db import init_db, insert_record, query_all, get_today_snapshot, get_monthly_rollup
 from src.fetch import get_fiidii_data, get_nifty_history
 from src.charts import (
     build_trend_chart,
@@ -15,6 +15,7 @@ from src.charts import (
     build_rolling_avg_chart,
     build_fii_nifty_overlay,
 )
+from src.ai import generate_summary
 
 st.set_page_config(
     page_title="FII/DII Data Dashboard",
@@ -124,8 +125,44 @@ if today_data:
                 delta=delta,
             )
             st.caption(f"Buy: ₹{record['buy_value']:,.0f} | Sell: ₹{record['sell_value']:,.0f}")
+
+    # ─── AI Interpretation ─────────────────────────────────
+    fii_row = next((r for r in today_data if r['category'] == 'FII/FPI'), None)
+    dii_row = next((r for r in today_data if r['category'] == 'DII'), None)
+    if fii_row:
+        fii_net = fii_row['net_value']
+        dii_net = dii_row['net_value'] if dii_row else 0.0
+        # Trend detection: how many consecutive FII days in same direction?
+        all_records_recent = query_all(conn)[-10:]
+        trend_days = 0
+        for r in reversed(all_records_recent):
+            if r['category'] != 'FII/FPI':
+                continue
+            if (r['net_value'] >= 0 and fii_net >= 0) or (r['net_value'] < 0 and fii_net < 0):
+                trend_days += 1
+            else:
+                break
+        summary = generate_summary(fii_net, dii_net, today_str, trend_days)
+        st.info(f"💡 {summary}")
 else:
     st.info("No data for today. Data auto-fetches during market hours.")
+
+
+# ─── Monthly Rollup ───────────────────────────────────────
+st.header("Month-to-Date")
+now = datetime.now()
+monthly = get_monthly_rollup(conn, now.year, now.month)
+if monthly:
+    cols = st.columns(len(monthly))
+    for i, row in enumerate(monthly):
+        with cols[i]:
+            delta = f"+{row['net_value']:,.0f}" if row['net_value'] >= 0 else f"{row['net_value']:,.0f}"
+            st.metric(
+                label=f"{row['category']} MTD (₹ Cr)",
+                value=f"₹{row['net_value']:,.0f}",
+                delta=delta,
+            )
+            st.caption(f"Buy: ₹{row['buy_value']:,.0f} | Sell: ₹{row['sell_value']:,.0f}")
 
 
 # ─── Charts ───────────────────────────────────────────────

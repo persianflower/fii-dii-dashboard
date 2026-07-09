@@ -79,3 +79,20 @@ def get_today_snapshot(conn: sqlite3.Connection, today: Optional[str] = None) ->
         "FROM fii_dii_data WHERE date = ? ORDER BY category",
         (today,)
     ).fetchall()
+
+
+def get_monthly_rollup(conn: sqlite3.Connection, year: int, month: int) -> list[dict]:
+    """Aggregate FII/DII data for a given month (month-to-date)."""
+    records = query_all(conn)
+    groups: dict[str, dict] = {}
+    for r in records:
+        d = datetime.strptime(r["date"], "%d-%b-%Y")
+        if d.year != year or d.month != month:
+            continue
+        cat = r["category"]
+        if cat not in groups:
+            groups[cat] = {"category": cat, "buy_value": 0.0, "sell_value": 0.0, "net_value": 0.0}
+        groups[cat]["buy_value"] += r["buy_value"]
+        groups[cat]["sell_value"] += r["sell_value"]
+        groups[cat]["net_value"] += r["net_value"]
+    return list(groups.values())
