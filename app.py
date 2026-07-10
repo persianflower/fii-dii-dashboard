@@ -94,7 +94,7 @@ all_records = query_all(conn)
 
 # ─── Auto-seed sample data when DB is too thin ─────────────
 _unique_dates = len(set(r["date"] for r in all_records))
-if _unique_dates < 3 and not today_snapshot and not st.session_state.data_fetched:
+if _unique_dates < 3 and not today_snapshot:
     sample = generate_sample_data(30)
     for r in sample:
         insert_record(conn, r["date"], r["category"],
@@ -266,7 +266,7 @@ except Exception:
 # ─── Section 4: Charts ─────────────────────────────────────
 _section(_RF, "Historical Trends")
 
-if len(filtered) >= 2:
+if filtered:
     t1, t2, t3, t4 = st.tabs(["Net Flow Trend", "FII vs DII", "Rolling Averages", "FII vs Nifty"])
 
     with t1:
@@ -303,12 +303,6 @@ if len(filtered) >= 2:
                 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         except Exception:
             _error_placeholder("Nifty overlay chart")
-else:
-    if not filtered:
-        st.markdown('<div class="empty">No data — adjust the date range.</div>', unsafe_allow_html=True)
-    elif len(filtered) == 1:
-        # Single record is just one category for a day — show anyway
-        st.markdown('<div class="empty">Only one data point. Load sample data for more.</div>', unsafe_allow_html=True)
 
 # ─── Footer ────────────────────────────────────────────────
 st.markdown(
