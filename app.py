@@ -67,6 +67,13 @@ def _error_placeholder(section: str):
     )
 
 
+def _chart_unavailable():
+    st.markdown(
+        '<div class="empty">Chart unavailable — plotting library not loaded.</div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ─── Init DB ───────────────────────────────────────────────
 conn = init_db(DB_PATH)
 today_str = datetime.now().strftime("%d-%b-%Y")
@@ -131,12 +138,12 @@ with st.sidebar:
     st.divider()
 
     st.markdown(f"**Actions** {_RF}", unsafe_allow_html=True)
-    if st.button("Refresh data", use_container_width=True):
+    if st.button("Refresh data", width='stretch'):
         st.session_state.nifty_prices = None
         st.cache_resource.clear()
         st.rerun()
 
-    if st.button("Load sample data (30d)", use_container_width=True):
+    if st.button("Load sample data (30d)", width='stretch'):
         sample = generate_sample_data(30)
         conn.execute("DELETE FROM fii_dii_data")
         for r in sample:
@@ -157,7 +164,7 @@ with st.sidebar:
             data=buf.getvalue(),
             file_name=f"fiidii_data_{today_str}.csv",
             mime="text/csv",
-            use_container_width=True,
+            width='stretch',
         )
     st.divider()
 
@@ -277,20 +284,25 @@ except Exception:
 _section(_RF, "Historical Trends")
 
 if filtered:
+    st.caption(f"Charting {len(filtered)} records across {len(set(r['date'] for r in filtered))} trading days")
     t1, t2, t3, t4 = st.tabs(["Net Flow Trend", "FII vs DII", "Rolling Averages", "FII vs Nifty"])
 
     with t1:
         try:
             fig = build_trend_chart(filtered)
             if fig is not None:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            else:
+                _chart_unavailable()
         except Exception:
             _error_placeholder("trend chart")
     with t2:
         try:
             fig = build_comparison_chart(filtered)
             if fig is not None:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            else:
+                _chart_unavailable()
         except Exception:
             _error_placeholder("comparison chart")
     with t3:
@@ -298,7 +310,9 @@ if filtered:
             window = st.selectbox("Rolling window", [7, 15, 30], index=0, label_visibility="collapsed")
             fig = build_rolling_avg_chart(filtered, window=window)
             if fig is not None:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            else:
+                _chart_unavailable()
         except Exception:
             _error_placeholder("rolling average chart")
     with t4:
@@ -310,7 +324,9 @@ if filtered:
                     )
             fig = build_fii_nifty_overlay(filtered, nifty_prices=st.session_state.nifty_prices)
             if fig is not None:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            else:
+                _chart_unavailable()
         except Exception:
             _error_placeholder("Nifty overlay chart")
 
