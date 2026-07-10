@@ -39,18 +39,6 @@ def _import_go():
     except Exception as e:
         err = str(e)
         log.warning("chart import failed: %s", err)
-        # One-shot auto-install for environments where pip didn't run on deploy
-        if "No module named" in err:
-            try:
-                import subprocess, sys
-                log.info("attempting auto-install via %s", sys.executable)
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", "plotly>=5.18", "--quiet"]
-                )
-                import plotly.graph_objects as go
-                return go, None
-            except Exception as install_exc:
-                log.error("auto-install failed: %s", install_exc)
         # Return the real error so user sees what's actually broken
         return None, err
 
