@@ -26,54 +26,62 @@ def sample_data():
 
 class TestTrendChart:
     def test_returns_plotly_figure(self, sample_data):
-        fig = build_trend_chart(sample_data)
+        fig, err = build_trend_chart(sample_data)
+        assert err is None
         assert isinstance(fig, go.Figure)
 
     def test_has_two_traces(self, sample_data):
-        fig = build_trend_chart(sample_data)
+        fig, err = build_trend_chart(sample_data)
+        assert err is None
         assert len(fig.data) >= 2
 
     def test_fii_trace_has_correct_values(self, sample_data):
-        fig = build_trend_chart(sample_data)
+        fig, err = build_trend_chart(sample_data)
+        assert err is None
         fii_net = [1500.0, 1500.0, 1962.8, 2000.0, 1700.0]
-        # Find the FII trace (first two traces are FII and DII net)
         for trace in fig.data[:2]:
             if list(trace.y) == fii_net:
                 return
-        # Allow approximate comparison
         for trace in fig.data[:2]:
             if all(abs(a - b) < 1 for a, b in zip(list(trace.y), fii_net)):
                 return
         pytest.fail("FII trace with correct values not found")
 
     def test_empty_data_returns_figure(self):
-        fig = build_trend_chart([])
+        fig, err = build_trend_chart([])
+        assert err is None
         assert isinstance(fig, go.Figure)
 
     def test_single_day_returns_figure(self, sample_data):
-        fig = build_trend_chart(sample_data[:2])
+        fig, err = build_trend_chart(sample_data[:2])
+        assert err is None
         assert isinstance(fig, go.Figure)
 
 
 class TestComparisonChart:
     def test_returns_plotly_figure(self, sample_data):
-        fig = build_comparison_chart(sample_data)
+        fig, err = build_comparison_chart(sample_data)
+        assert err is None
         assert isinstance(fig, go.Figure)
 
     def test_has_traces(self, sample_data):
-        fig = build_comparison_chart(sample_data)
+        fig, err = build_comparison_chart(sample_data)
+        assert err is None
         assert len(fig.data) > 0
 
 
 class TestRollingAvgChart:
     def test_returns_plotly_figure(self, sample_data):
-        fig = build_rolling_avg_chart(sample_data, window=3)
+        fig, err = build_rolling_avg_chart(sample_data, window=3)
+        assert err is None
         assert isinstance(fig, go.Figure)
 
     def test_has_two_traces(self, sample_data):
-        fig = build_rolling_avg_chart(sample_data, window=3)
+        fig, err = build_rolling_avg_chart(sample_data, window=3)
+        assert err is None
         assert len(fig.data) == 2
 
     def test_empty_data_returns_figure(self):
-        fig = build_rolling_avg_chart([], window=3)
+        fig, err = build_rolling_avg_chart([], window=3)
+        assert err is None
         assert isinstance(fig, go.Figure)

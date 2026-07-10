@@ -289,18 +289,28 @@ if filtered:
 
     with t1:
         try:
-            fig = build_trend_chart(filtered)
+            fig, err = build_trend_chart(filtered)
             if fig is not None:
                 st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            elif err:
+                st.markdown(
+                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 _chart_unavailable()
         except Exception:
             _error_placeholder("trend chart")
     with t2:
         try:
-            fig = build_comparison_chart(filtered)
+            fig, err = build_comparison_chart(filtered)
             if fig is not None:
                 st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            elif err:
+                st.markdown(
+                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 _chart_unavailable()
         except Exception:
@@ -308,9 +318,14 @@ if filtered:
     with t3:
         try:
             window = st.selectbox("Rolling window", [7, 15, 30], index=0, label_visibility="collapsed")
-            fig = build_rolling_avg_chart(filtered, window=window)
+            fig, err = build_rolling_avg_chart(filtered, window=window)
             if fig is not None:
                 st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            elif err:
+                st.markdown(
+                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 _chart_unavailable()
         except Exception:
@@ -322,9 +337,14 @@ if filtered:
                     st.session_state.nifty_prices = get_nifty_history(
                         start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
                     )
-            fig = build_fii_nifty_overlay(filtered, nifty_prices=st.session_state.nifty_prices)
+            fig, err = build_fii_nifty_overlay(filtered, nifty_prices=st.session_state.nifty_prices)
             if fig is not None:
                 st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+            elif err:
+                st.markdown(
+                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    unsafe_allow_html=True,
+                )
             else:
                 _chart_unavailable()
         except Exception:

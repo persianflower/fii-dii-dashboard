@@ -29,23 +29,25 @@ def _pivot_net(df):
 
 
 def _import_go():
-    """Lazy import plotly.graph_objects — returns None on failure."""
+    """Lazy import plotly.graph_objects — returns (go|None, error_msg)."""
     try:
         import plotly.graph_objects as go
-        return go
-    except ImportError:
-        return None
+        return go, None
+    except Exception as e:
+        return None, str(e)
 
 
 def build_trend_chart(records: list[dict]):
-    """Build a net FII/DII trend line chart. Returns None if plotly unavailable."""
-    go = _import_go()
+    """Build a net FII/DII trend line chart. Returns (Figure|None, error_msg)."""
+    go, err = _import_go()
+    if err:
+        return None, err
     if go is None:
-        return None
+        return None, "plotly import returned None"
 
     df = _records_to_df(records)
     if df is None or df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return go.Figure().update_layout(title="No data available"), None
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
@@ -71,18 +73,20 @@ def build_trend_chart(records: list[dict]):
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
         margin=dict(l=40, r=20, t=40, b=40),
     )
-    return fig
+    return fig, None
 
 
 def build_comparison_chart(records: list[dict]):
-    """Build a grouped bar chart comparing FII vs DII net values. Returns None if plotly unavailable."""
-    go = _import_go()
+    """Build a grouped bar chart comparing FII vs DII net values. Returns (Figure|None, error_msg)."""
+    go, err = _import_go()
+    if err:
+        return None, err
     if go is None:
-        return None
+        return None, "plotly import returned None"
 
     df = _records_to_df(records)
     if df is None or df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return go.Figure().update_layout(title="No data available"), None
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
@@ -105,18 +109,20 @@ def build_comparison_chart(records: list[dict]):
         hovermode="x unified",
         margin=dict(l=40, r=20, t=40, b=40),
     )
-    return fig
+    return fig, None
 
 
 def build_rolling_avg_chart(records: list[dict], window: int = 7):
-    """Build a rolling average chart. Returns None if plotly unavailable."""
-    go = _import_go()
+    """Build a rolling average chart. Returns (Figure|None, error_msg)."""
+    go, err = _import_go()
+    if err:
+        return None, err
     if go is None:
-        return None
+        return None, "plotly import returned None"
 
     df = _records_to_df(records)
     if df is None or df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return go.Figure().update_layout(title="No data available"), None
 
     pivoted = _pivot_net(df)
     fig = go.Figure()
@@ -143,24 +149,26 @@ def build_rolling_avg_chart(records: list[dict], window: int = 7):
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
         margin=dict(l=40, r=20, t=40, b=40),
     )
-    return fig
+    return fig, None
 
 
 def build_fii_nifty_overlay(records: list[dict], nifty_prices: Optional[dict[str, float]] = None):
-    """Dual-axis chart: FII net flow + Nifty closing price. Returns None if plotly unavailable."""
-    go = _import_go()
+    """Dual-axis chart: FII net flow + Nifty closing price. Returns (Figure|None, error_msg)."""
+    go, err = _import_go()
+    if err:
+        return None, err
     if go is None:
-        return None
+        return None, "plotly import returned None"
 
     from plotly.subplots import make_subplots
 
     df = _records_to_df(records)
     if df is None or df.empty:
-        return go.Figure().update_layout(title="No data available")
+        return go.Figure().update_layout(title="No data available"), None
 
     fii_data = df[df["category"] == "FII/FPI"]
     if fii_data.empty:
-        return go.Figure().update_layout(title="No FII data available")
+        return go.Figure().update_layout(title="No FII data available"), None
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -203,4 +211,4 @@ def build_fii_nifty_overlay(records: list[dict], nifty_prices: Optional[dict[str
     )
     fig.update_yaxes(title_text="FII Net (₹ Cr)", secondary_y=False)
     fig.update_yaxes(title_text="Nifty 50", secondary_y=True)
-    return fig
+    return fig, None
