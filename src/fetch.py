@@ -107,10 +107,12 @@ def generate_sample_data(days: int = 30) -> list[dict]:
         records.append({"date": date_str, "category": "FII/FPI",
                         "buy_value": round(fii_buy, 2),
                         "sell_value": round(fii_sell, 2),
-                        "net_value": round(fii_net, 2)})
+                        "net_value": round(fii_net, 2),
+                        "source": "sample"})
         records.append({"date": date_str, "category": "DII",
                         "buy_value": round(dii_buy, 2),
                         "sell_value": round(dii_sell, 2),
-                        "net_value": round(dii_net, 2)})
+                        "net_value": round(dii_net, 2),
+                        "source": "sample"})
 
     return records

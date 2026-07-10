@@ -98,7 +98,8 @@ if _unique_dates < 3 and not today_snapshot:
     sample = generate_sample_data(30)
     for r in sample:
         insert_record(conn, r["date"], r["category"],
-                      r["buy_value"], r["sell_value"], r["net_value"])
+                      r["buy_value"], r["sell_value"], r["net_value"],
+                      source=r.get("source", "sample"))
     all_records = query_all(conn)
     st.session_state.seeded_sample = True
 
@@ -140,8 +141,10 @@ with st.sidebar:
         conn.execute("DELETE FROM fii_dii_data")
         for r in sample:
             insert_record(conn, r["date"], r["category"],
-                          r["buy_value"], r["sell_value"], r["net_value"])
+                          r["buy_value"], r["sell_value"], r["net_value"],
+                          source=r.get("source", "sample"))
         st.session_state.nifty_prices = None
+        st.session_state.seeded_sample = True
         st.rerun()
     st.caption("Replaces existing data with 30 days of mock data.")
 
@@ -165,7 +168,7 @@ with st.sidebar:
         st.caption(f"Today's data loaded — {today_str}")
     elif st.session_state.data_fetched:
         st.caption(f"Fresh data fetched — {today_str}")
-    elif st.session_state.seeded_sample:
+    elif st.session_state.seeded_sample or has_mock_data(conn):
         st.caption("Sample data — click Refresh for live NSE data")
     else:
         st.caption("Historical only (no new data)")
@@ -220,6 +223,13 @@ _range_label = start_date.strftime("%d-%b-%Y") if _is_single_day else f"{start_d
 
 # ─── Section 1: Date Range Summary ─────────────────────────
 _section(_II, _range_label)
+
+if st.session_state.seeded_sample or has_mock_data(conn):
+    st.warning(
+        "**Sample data mode** — The values shown include mock data, not live NSE figures. "
+        "Click **Refresh data** in the sidebar to fetch real NSE data."
+    )
+
 try:
     if filtered:
         groups = _range_aggregate(filtered)
