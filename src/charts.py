@@ -34,7 +34,19 @@ def _import_go():
         import plotly.graph_objects as go
         return go, None
     except Exception as e:
-        return None, str(e)
+        err = str(e)
+        # One-shot auto-install for Streamlit Cloud where pip may not run on deploy
+        if "No module named 'plotly'" in err:
+            try:
+                import subprocess, sys
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "plotly>=5.18", "--quiet"]
+                )
+                import plotly.graph_objects as go
+                return go, None
+            except Exception:
+                pass
+        return None, err
 
 
 def build_trend_chart(records: list[dict]):
