@@ -45,14 +45,19 @@ class TestParseFiidiiRow:
 class TestGetFiidiiData:
     """Patch nsepython.nse_fiidii directly (local import)."""
 
+    def _make_df(self, records):
+        """Convert list of dicts to DataFrame matching nse_fiidii() return."""
+        import pandas as pd
+        return pd.DataFrame(records)
+
     @patch("nsepython.nse_fiidii")
     def test_returns_parsed_records(self, mock_fiidii):
-        mock_fiidii.return_value = [
+        mock_fiidii.return_value = self._make_df([
             {"category": "FII/FPI", "date": "09-Jul-2026",
              "buyValue": "17463.95", "sellValue": "15501.15", "netValue": "1962.8"},
             {"category": "DII", "date": "09-Jul-2026",
              "buyValue": "5000.0", "sellValue": "6000.0", "netValue": "-1000.0"},
-        ]
+        ])
         result = get_fiidii_data()
         assert len(result) == 2
         assert result[0]["category"] == "FII/FPI"
@@ -60,12 +65,22 @@ class TestGetFiidiiData:
 
     @patch("nsepython.nse_fiidii")
     def test_handles_empty_response(self, mock_fiidii):
-        mock_fiidii.return_value = []
+        mock_fiidii.return_value = self._make_df([])
         assert get_fiidii_data() == []
 
     @patch("nsepython.nse_fiidii")
     def test_handles_nse_error(self, mock_fiidii):
         mock_fiidii.side_effect = Exception("NSE API unavailable")
+        assert get_fiidii_data() == []
+
+    @patch("nsepython.nse_fiidii")
+    def test_handles_dataframe_with_partial_missing_fields(self, mock_fiidii):
+        """Regression test: DataFrame with empty/missing fields."""
+        import pandas as pd
+        df = pd.DataFrame([
+            {"buyValue": "", "category": "", "date": "", "netValue": "", "sellValue": ""},
+        ])
+        mock_fiidii.return_value = df
         assert get_fiidii_data() == []
 
 

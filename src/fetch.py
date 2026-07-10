@@ -27,17 +27,18 @@ def parse_fiidii_row(raw: dict) -> Optional[dict]:
 def get_fiidii_data() -> list[dict]:
     """Fetch current FII/DII data from NSE and return parsed records.
 
-    Retries up to 2 times with 2s backoff. Returns empty list on all failures.
+    nse_fiidii() returns a pandas DataFrame. Retries up to 2 times
+    with 2s backoff. Returns empty list on all failures.
     """
     import time
     for attempt in range(3):
         try:
             import nsepython as nse
-            raw_rows = nse.nse_fiidii()
-            if not raw_rows:
+            raw = nse.nse_fiidii()
+            if raw.empty:
                 return []
             parsed = []
-            for row in raw_rows:
+            for row in raw.to_dict("records"):
                 p = parse_fiidii_row(row)
                 if p:
                     parsed.append(p)
