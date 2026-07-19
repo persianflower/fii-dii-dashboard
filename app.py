@@ -43,6 +43,7 @@ _IN = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0
 _CA = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>'
 _RF = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>'
 _DL = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+_WARN = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
 
 # ─── CSS ───────────────────────────────────────────────────
 render_css()
@@ -53,8 +54,8 @@ def _section(icon_svg: str, label: str):
     st.markdown(f'<div class="hdr">{icon_svg} {html.escape(label)}</div><hr>', unsafe_allow_html=True)
 
 
-def _metric_card(icon_svg: str, label: str, value: str, delta: str,
-                 caption: str, color: str = "#64748b"):
+def _metric_card(icon_svg: str, label: str, value: str, caption: str,
+                 delta: str | None = None, color: str = "#64748b"):
     st.markdown(
         f'<div class="ml" style="color:{color}">{icon_svg} {label}</div>',
         unsafe_allow_html=True,
@@ -65,7 +66,7 @@ def _metric_card(icon_svg: str, label: str, value: str, delta: str,
 
 def _error_placeholder(section: str):
     st.markdown(
-        f'<div class="error-placeholder">⚠️ Could not load {section}. '
+        f'<div class="error-placeholder">{_WARN} Could not load {section}. '
         f'Try refreshing the page.</div>',
         unsafe_allow_html=True,
     )
@@ -214,16 +215,18 @@ def _range_aggregate(records: list[dict]) -> dict:
 def _render_flow_cards(groups: dict, prefix: str = ""):
     """Render FII + DII metric cards from an aggregated group dict."""
     cols = st.columns(len(groups))
-    for i, (cat, vals) in enumerate(sorted(groups.items())):
+    cat_order = ["FII/FPI", "DII"]
+    for i, cat in enumerate(cat_order):
+        if cat not in groups:
+            continue
+        vals = groups[cat]
         with cols[i]:
             is_fii = cat == "FII/FPI"
-            color = "#16a34a" if is_fii else "#dc2626"
-            sign = "+" if vals["net_value"] >= 0 else ""
+            color = "#22C55E" if is_fii else "#EF4444"
             _metric_card(
                 icon_svg=_II if is_fii else _IN,
                 label=f"{cat}{prefix}",
                 value=f"₹{vals['net_value']:,.0f} Cr",
-                delta=f"{sign}{vals['net_value']:,.0f} Cr",
                 caption=f"Buy: ₹{vals['buy_value']:,.0f} Cr | Sell: ₹{vals['sell_value']:,.0f} Cr",
                 color=color,
             )
@@ -317,7 +320,7 @@ if filtered:
                 st.altair_chart(fig, use_container_width=True)
             elif err:
                 st.markdown(
-                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    f'<div class="empty">{_WARN} Chart library error: {err}</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -332,7 +335,7 @@ if filtered:
                 st.altair_chart(fig, use_container_width=True)
             elif err:
                 st.markdown(
-                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    f'<div class="empty">{_WARN} Chart library error: {err}</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -348,7 +351,7 @@ if filtered:
                 st.altair_chart(fig, use_container_width=True)
             elif err:
                 st.markdown(
-                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    f'<div class="empty">{_WARN} Chart library error: {err}</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -370,7 +373,7 @@ if filtered:
                 st.altair_chart(fig, use_container_width=True)
             elif err:
                 st.markdown(
-                    f'<div class="empty">⚠️ Chart library error: {err}</div>',
+                    f'<div class="empty">{_WARN} Chart library error: {err}</div>',
                     unsafe_allow_html=True,
                 )
             else:
@@ -380,12 +383,12 @@ if filtered:
             _error_placeholder("Nifty overlay chart")
 
 # ─── Footer ────────────────────────────────────────────────
+sample_tag = " · Sample mode" if st.session_state.seeded_sample else ""
 st.markdown(
-    f'<div style="margin-top:32px;padding:12px 0;border-top:1px solid #e2e8f0;'
-    f'font-size:0.7rem;color:#94a3b8;display:flex;justify-content:space-between">'
-    f'<span>FII/DII Dashboard &mdash; {_CA} {today_str}</span>'
-    f'<span>{"Sample mode · " if st.session_state.seeded_sample else ""}'
-    f'AGPL v3 &middot; '
-    f'<a href="https://github.com/AshayK003/fii-dii-dashboard" style="color:#94a3b8">GitHub</a></span></div>',
+    f'<div class="footer">'
+    f'<span>FII/DII Dashboard · {_CA} {today_str}</span>'
+    f'<span>{sample_tag}'
+    f'AGPL v3 | '
+    f'<a href="https://github.com/AshayK003/fii-dii-dashboard">GitHub</a></span></div>',
     unsafe_allow_html=True,
 )

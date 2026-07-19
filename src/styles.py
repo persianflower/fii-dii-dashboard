@@ -72,6 +72,17 @@ APP_CSS = """
             background: #451a1a; border-color: #7f1d1d; color: #fca5a5;
         }
     }
+    @media (prefers-reduced-motion: reduce) {
+        .stButton button:hover { transition: none; }
+    }
+    .footer {
+        margin-top: 32px; padding: 12px 0;
+        border-top: 1px solid var(--border-card);
+        font-size: 0.7rem; color: var(--text-caption);
+        display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    }
+    .footer a { color: var(--text-caption); }
+    .footer a:hover { color: var(--text-primary); }
 </style>
 """
 
