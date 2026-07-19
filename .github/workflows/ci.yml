@@ -30,3 +30,6 @@ jobs:
 
       - name: Test
         run: uv run pytest tests/ -v --tb=short -Wignore::FutureWarning
+
+      - name: Run Ruff
+        run: ruff check --output-format=github
